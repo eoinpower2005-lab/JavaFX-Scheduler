@@ -30,7 +30,7 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        ObservableList<TimetableSlot> timetableSlots = FXCollections.observableArrayList();
+        Server server = new Server();
 
         ComboBox<String> box1 = new ComboBox(FXCollections.observableArrayList("ADD", "REMOVE", "DISPLAY"));
         box1.setPromptText("Choose an Option");
@@ -83,71 +83,38 @@ public class App extends Application {
         tableView.getColumns().addAll(col1, col2, col3, col4);
         tableView.setEditable(false);
         tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        tableView.setItems(timetableSlots);
+        tableView.setItems(server.getTimetableSlots());
 
         EventHandler<ActionEvent> button1Event = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                    try {
-                        String option = box1.getValue();
-                        String room = roomID.getText();
-                        String date = String.valueOf(datePicker.getValue());
-                        String time = box2.getValue();
-                        String module = box3.getValue();
-                        if (option == null) {
-                            throw new InvalidInputException("You must select an option!");
-                        } else if (option.equals("ADD")) {
-                            if (date == null || date.isEmpty() || time == null || time.isEmpty() || module == null || module.isEmpty() || room == null || room.isEmpty()) {
-                                throw new InvalidInputException("Data fields cannot be empty!");
-                            }
-
-                            boolean exists = false;
-                            for (TimetableSlot slot : timetableSlots) {
-                                if (slot.getDate().equals(date) && slot.getTime().equals(time) && slot.getRoom().equals(room)) {
-                                    throw new InvalidInputException("Clash: Timetable Slot already exists for that room, date, and time!");
-                                }
-                            }
-                            
-                            String request = option + " | " + date + " | " + time + " | " + room + " | " + module;
-                            ta.appendText("CLIENT: " + request + "\n");
-                            timetableSlots.add(new TimetableSlot(date, time, room, module));
-                            String response = "Timetable Slot Added";
-                            ta.appendText("SERVER: " + response + "\n");
-                        } else if (option.equals("REMOVE")) {
-                            TimetableSlot match = null;
-                            if (timetableSlots.isEmpty()) {
-                                throw new InvalidInputException("Cannot remove timetable slot! No slots exist.");
-                            }
-                            for (TimetableSlot slot : timetableSlots) {
-                                if (slot.getDate().equals(date) && slot.getTime().equals(time) && slot.getRoom().equals(room) && slot.getModule().equals(module)) {
-                                    match = slot;
-                                    break;
-                                }
-                            }
-
-                            if (match == null) {
-                                throw new InvalidInputException("Cannot remove timetable slot! Matching slot not found.");
-                            } else {
-                                String request = option + " | " + date + " | " + time + " | " + room + " | " + module;
-                                ta.appendText("CLIENT: " + request + "\n");
-                                timetableSlots.remove(match);
-                                String response = "Timetable Slot Removed";
-                                ta.appendText("SERVER: " + response + "\n");
-                            }
-                        } else if (option.equals("DISPLAY")) {
-                            if (timetableSlots == null || timetableSlots.isEmpty()) {
-                                throw new InvalidInputException("No timetable slots found!");
-                            } else {
-                                String request = option + " | | | |";
-                                ta.appendText("CLIENT: " + request + "\n");
-                                String response = "Timetable Slot's Displayed";
-                                ta.appendText("SERVER: " + response + "\n");
-                            }
-                        }
-                    } catch (InvalidInputException e) {
-                        displayError(e.getMessage());
+                try {
+                    String option = box1.getValue();
+                    String room = roomID.getText();
+                    String date = String.valueOf(datePicker.getValue());
+                    String time = box2.getValue();
+                    String module = box3.getValue();
+                    if (option == null) {
+                        throw new InvalidInputException("You must select an option!");
                     }
+
+                    String request = " ";
+                    if (option.equals("ADD") || option.equals("REMOVE")) {
+                        request = option + "|" + date + "|" + time + "|" + room + "|" + module;
+                    } else if (option.equals("DISPLAY")) {
+                        request = option + "||||";
+                    }
+
+                    ta.appendText("CLIENT: " + request + "\n");
+                    String response = server.clientRequest(request);
+                    ta.appendText("SERVER: " + response + "\n");
+
+                } catch (InvalidInputException e) {
+                    displayError(e.getMessage());
+                }
             }
+
+            ;
         };
 
         EventHandler<ActionEvent> button2Event = new EventHandler<ActionEvent>() {
@@ -163,7 +130,7 @@ public class App extends Application {
         EventHandler<ActionEvent> button3Event = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                timetableSlots.clear();
+                server.getTimetableSlots().clear();
                 ta.appendText("Timetable Slots Cleared. \n");
             }
         };
